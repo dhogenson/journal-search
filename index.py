@@ -5,7 +5,7 @@ from pathlib import Path
 import requests
 import sqlite_vec
 
-from config import CHUNK_SIZE, MODEL, OLLAMA_URL, DATABASE_PATH
+from config import CHUNK_SIZE, DATABASE_PATH, MODEL, OLLAMA_URL
 
 
 def main():

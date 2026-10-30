@@ -1,14 +1,18 @@
-from mcp.server.mcpserver import MCPServer
-import sqlite_vec
-from config import OLLAMA_URL, MODEL, DATABASE_PATH, HOST, PORT
-import requests
 import sqlite3
+
+import requests
+import sqlite_vec
+from mcp.server.mcpserver import MCPServer
+
+from config import DATABASE_PATH, HOST, MODEL, OLLAMA_URL, PORT
 
 mcp = MCPServer("search-journal")
 
 @mcp.tool()
-def search(prompt: str, limit: int = 5) -> list[dict]:
+def search(prompt: str, limit: int = 3) -> list[dict]:
     """Search journal using RAG"""
+    prompt = prompt.strip()
+
     if not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
 
@@ -20,8 +24,8 @@ def search(prompt: str, limit: int = 5) -> list[dict]:
         )
         response.raise_for_status()
         embedding = response.json()["embeddings"][0]
-    except:
-        raise RuntimeError("Unable to get embeddings")
+    except Exception as error:
+        raise RuntimeError("Unable to get embeddings") from error
 
     db: sqlite3.Connection | None = None
     try:

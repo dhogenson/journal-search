@@ -9,3 +9,6 @@ dependencies = [
     "requests>=2.34.2",
     "sqlite-vec>=0.1.9",
 ]
+
+[tool.ruff]
+fix = true

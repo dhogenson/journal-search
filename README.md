@@ -38,10 +38,17 @@ Mount your Markdown directory read-only and run the indexer using the same
 image, settings, and persistent database volume as the server:
 
 ```sh
-docker compose run --rm \
-  -v /absolute/path/to/journals:/journals:ro \
-  search-journal python index.py /journals
+./index.sh /path/to/journals
 ```
+
+Relative paths are supported. Quote paths containing spaces, for example:
+
+```sh
+./index.sh "~/Documents/My Journals"
+```
+
+Run `./index.sh --help` for usage. The script validates the folder and mounts it
+read-only at `/journals` inside the container.
 
 Then start the server:
 
@@ -55,6 +62,31 @@ non-empty Markdown file before searching. Re-run the indexing command to update
 changed files, keeping the same `/journals` mount path. Use the same embedding
 model for indexing and searching; rebuild the index if you change models.
 
+### LAN access
+
+The default Compose configuration only accepts connections from the Docker
+host. To allow other machines on your LAN, change `HOST` in
+`docker-compose.yaml`:
+
+```yaml
+    environment:
+      HOST: 0.0.0.0
+```
+
+Recreate the container to apply the change:
+
+```sh
+docker compose up -d --force-recreate
+```
+
+LAN clients can then connect to `http://<server-lan-ip>:8000/mcp`. Because
+Compose uses host networking, no `ports:` mapping is needed. If your host has a
+firewall, allow TCP port 8000 only from the intended clients. Ollama can remain
+bound to localhost; it does not need to be exposed to the LAN.
+
+Setting `HOST` in `.env` alone does not enable LAN access: the current Compose
+file hardcodes it to `127.0.0.1`.
+
 ### Persistence and security
 
 - The `journal-data` named volume stores `/data/index.db` and survives container
@@ -64,8 +96,11 @@ model for indexing and searching; rebuild the index if you change models.
   `index.db` can be placed there before starting the service.
 - Journal files, local databases, `.env` files, and `.venv` are excluded from the
   image build context. The database contains journal text; treat it as private.
-- Compose binds the unauthenticated MCP server only to `127.0.0.1`. Add an
-  authenticated reverse proxy before exposing it to other machines.
+- Compose binds the MCP server only to `127.0.0.1` by default. The server has no
+  authentication and returns private journal content. Put an authenticated
+  reverse proxy in front of it before allowing access from other machines, and
+  restrict direct access to port 8000 to that proxy. Do not expose the
+  unauthenticated endpoint to the internet.
 
 ## Configuration
 
