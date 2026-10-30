@@ -1,0 +1,15 @@
+services:
+  search-journal:
+    build: .
+    network_mode: host
+    environment:
+      HOST: 127.0.0.1
+      OLLAMA_URL: ${OLLAMA_URL:-http://127.0.0.1:11434/api/embed}
+      MODEL: ${MODEL:-embeddinggemma-2:270m}
+      DATABASE_PATH: /data/index.db
+    volumes:
+      - journal-data:/data
+    restart: unless-stopped
+
+volumes:
+  journal-data:

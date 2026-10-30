@@ -1,0 +1,9 @@
+# Keep journal content, databases, credentials, and local tooling out of the image.
+**
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!README.md
+!config.py
+!main.py
+!index.py
