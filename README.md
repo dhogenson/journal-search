@@ -1,3 +1,5 @@
+**Note:** This is a personal project meant for my Journal, this is not a general purpose RAG mcp server
+
 # search-journal
 
 An MCP server that searches Markdown journals using Ollama embeddings and a
