@@ -118,3 +118,6 @@ Without Docker, install dependencies with `uv sync --locked`, run
 `uv run python index.py /path/to/journals`, then `uv run python main.py`.
 Environment variables must be exported when running locally; `.env` is read by
 Compose, not by the Python scripts.
+
+# License
+MIT
