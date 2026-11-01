@@ -1,9 +1,8 @@
-# Keep journal content, databases, credentials, and local tooling out of the image.
+# Allowlist: never send journal content, databases, or secrets to the builder.
 **
 !Dockerfile
-!pyproject.toml
-!uv.lock
-!README.md
-!config.py
-!main.py
-!index.py
+!package.json
+!bun.lock
+!index.ts
+!journal.ts
+!embedFiles.ts

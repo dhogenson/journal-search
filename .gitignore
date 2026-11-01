@@ -1,29 +1,34 @@
-# Python bytecode and caches
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-.coverage.*
-htmlcov/
+# dependencies (bun install)
+node_modules
 
-# Virtual environments
-.venv/
-venv/
+# output
+out
+dist
+*.tgz
 
-# Build artifacts
-build/
-dist/
-*.egg-info/
+# code coverage
+coverage
+*.lcov
 
-# Local secrets
+# logs
+logs
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# dotenv environment variable files
 .env
-.env.*
-!.env.example
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 
-# Generated journal database and SQLite sidecar files
-index.db
-index.db-journal
-index.db-wal
-index.db-shm
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# IntelliJ based IDEs
+.idea
+
+# Finder (MacOS) folder config
+.DS_Store

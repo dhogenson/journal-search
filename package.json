@@ -1,0 +1,17 @@
+{
+  "name": "search-journal",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "sqlite-vec": "^0.1.9",
+    "zod": "^4"
+  }
+}

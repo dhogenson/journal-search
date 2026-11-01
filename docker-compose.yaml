@@ -1,14 +1,23 @@
 services:
   search-journal:
     build: .
+    # Reach host-local Ollama without exposing it to the LAN.
     network_mode: host
     environment:
-      HOST: 127.0.0.1
-      OLLAMA_URL: ${OLLAMA_URL:-http://127.0.0.1:11434/api/embed}
-      MODEL: ${MODEL:-embeddinggemma-2:270m}
-      DATABASE_PATH: /data/index.db
+      HOST: ${HOST:-127.0.0.1}
+      PORT: ${PORT:-8000}
+      OLLAMA_URL: ${OLLAMA_URL:-http://127.0.0.1:11434}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-embeddinggemma-2:270m}
+      JOURNAL_DIR: /journal
+      JOURNAL_DB_PATH: /data/journal.sqlite
     volumes:
       - journal-data:/data
+      - type: bind
+        source: ${JOURNAL_DIR:-${HOME}/notes/Journal}
+        target: /journal
+        read_only: true
+        bind:
+          create_host_path: false
     restart: unless-stopped
 
 volumes:
