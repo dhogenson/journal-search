@@ -24,16 +24,17 @@ export interface SearchResult {
 }
 
 export type Embed = (text: string) => Promise<number[]>;
+export type EmbedBatch = (texts: string[]) => Promise<number[][]>;
 
 const embedResponseSchema = z.object({
   embeddings: z.array(z.array(z.number()).min(1)).min(1),
 });
 
-export const embedText: Embed = async (text) => {
+async function requestEmbeddings(input: string | string[]): Promise<number[][]> {
   const response = await fetch(`${ollamaUrl.replace(/\/$/, "")}/api/embed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: embeddingModel, input: text }),
+    body: JSON.stringify({ model: embeddingModel, input }),
     signal: AbortSignal.timeout(60_000),
   });
 
@@ -42,8 +43,17 @@ export const embedText: Embed = async (text) => {
   }
 
   const result = embedResponseSchema.parse(await response.json());
-  return result.embeddings[0]!;
-};
+  const expected = typeof input === "string" ? 1 : input.length;
+  if (result.embeddings.length !== expected) {
+    throw new Error(`Expected ${expected} embeddings, received ${result.embeddings.length}`);
+  }
+  return result.embeddings;
+}
+
+export const embedText: Embed = async (text) => (await requestEmbeddings(text))[0]!;
+
+export const embedTexts: EmbedBatch = async (texts) =>
+  texts.length ? requestEmbeddings(texts) : [];
 
 export class JournalDatabase {
   private readonly db: Database;

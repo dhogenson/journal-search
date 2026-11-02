@@ -29,6 +29,7 @@ afterEach(async () => {
 });
 
 const embed = async (text: string) => text.includes("hiking") ? [1, 0, 0] : [0, 1, 0];
+const embedBatch = (texts: string[]) => Promise.all(texts.map(embed));
 
 function chunk(file: string, text: string, embedding: number[], chunk_index = 0) {
   return { file, text, embedding, chunk_index };
@@ -37,9 +38,72 @@ function chunk(file: string, text: string, embedding: number[], chunk_index = 0)
 test("chunk indexes stay integral for the final partial chunk", async () => {
   const file = join(await temporaryDirectory(), "entry.md");
   await Bun.write(file, Array(1200).fill("word").join(" "));
-  const chunks = await indexFile(file, embed);
+  const chunks = await indexFile(file, embedBatch);
   expect(chunks.map((item) => item.chunk_index)).toEqual([0, 1, 2]);
   expect(chunks.map((item) => item.text.split(" ").length)).toEqual([512, 512, 176]);
+});
+
+test("indexFile batches chunks and preserves text, indexes, and embedding order", async () => {
+  const file = join(await temporaryDirectory(), "entry.md");
+  await Bun.write(file, ["first", "second", "third", "fourth", "fifth"]
+    .flatMap((word) => Array(512).fill(word)).join(" "));
+  const calls: string[][] = [];
+  const chunks = await indexFile(file, async (texts) => {
+    calls.push(texts);
+    return texts.map((text) => [text.length]);
+  }, 2);
+  expect(calls.map((texts) => texts.length)).toEqual([2, 2, 1]);
+  expect(chunks.map((item) => item.chunk_index)).toEqual([0, 1, 2, 3, 4]);
+  expect(chunks.map((item) => item.text.split(" ")[0])).toEqual([
+    "first", "second", "third", "fourth", "fifth",
+  ]);
+  expect(chunks.every((item) => item.embedding[0] === item.text.length)).toBe(true);
+});
+
+test("empty files skip embedding; invalid batches and embedding failures reject", async () => {
+  const file = join(await temporaryDirectory(), "entry.md");
+  await Bun.write(file, "  \n ");
+  const fail = async (): Promise<number[][]> => { throw new Error("Ollama unavailable"); };
+  expect(await indexFile(file, fail)).toEqual([]);
+  for (const size of [0, -1, 1.5, NaN, Infinity]) {
+    await rejects(indexFile(file, fail, size), /positive integer/);
+  }
+  await Bun.write(file, "some text");
+  await rejects(indexFile(file, fail), /Ollama unavailable/);
+  await rejects(indexFile(file, async () => []), /Expected 1 embeddings, received 0/);
+});
+
+test("indexing sends arrays to Ollama with a default limit of 32 chunks", async () => {
+  const file = join(await temporaryDirectory(), "entry.md");
+  await Bun.write(file, Array(512 * 32 + 1).fill("word").join(" "));
+  const calls: number[] = [];
+  const ollama = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      expect(new URL(request.url).pathname).toBe("/api/embed");
+      const body = await request.json() as { input: string[] };
+      expect(Array.isArray(body.input)).toBe(true);
+      calls.push(body.input.length);
+      return Response.json({ embeddings: body.input.map(() => [1, 0, 0]) });
+    },
+  });
+  try {
+    // A subprocess ensures journal.ts reads the mock URL before module initialization.
+    const process = Bun.spawn(["bun", "--eval", `
+      import { indexFile } from "./embedFiles";
+      const chunks = await indexFile(${JSON.stringify(file)});
+      if (chunks.length !== 33) throw new Error("Missing chunks");
+    `], {
+      cwd: import.meta.dir,
+      env: { ...Bun.env, OLLAMA_URL: ollama.url.toString() },
+      stdout: "pipe", stderr: "pipe",
+    });
+    const stderr = await new Response(process.stderr).text();
+    expect(await process.exited, stderr).toBe(0);
+    expect(calls).toEqual([32, 1]);
+  } finally {
+    ollama.stop(true);
+  }
 });
 
 test("indexing and semantic search return the nearest passage with its source", async () => {
@@ -48,7 +112,7 @@ test("indexing and semantic search return the nearest passage with its source", 
   await Bun.write(join(directory, "food.md"), "Cooked dinner");
   await Bun.write(join(directory, "ignore.txt"), "not a journal entry");
   const db = openDatabase();
-  await indexJournal(db, directory, embed);
+  await indexJournal(db, directory, embedBatch);
   const results = await db.search("hiking outdoors", 1, embed);
   expect(results).toHaveLength(1);
   expect(results[0]).toMatchObject({
